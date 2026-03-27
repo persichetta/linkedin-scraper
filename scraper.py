@@ -68,4 +68,6 @@ def salvar_no_sheets(vagas_novas):
         return
     print("📊 Enviando dados para o Google Sheets...")
     creds_info = json.loads(os.environ["GOOGLE_CREDENTIALS"])
-    creds = Credentials.from
+creds = Credentials.from_service_account_info(
+        creds_info, scopes=["https://www.googleapis.com/auth/spreadsheets"]
+    )
