@@ -1,0 +1,34 @@
+name: LinkedIn Job Scraper
+
+on:
+  schedule:
+    - cron: "0 9 * * 1-5"   # Roda de segunda a sexta às 9h (horário UTC = 6h BRT)
+  workflow_dispatch:          # Permite rodar manualmente pelo painel do GitHub
+
+jobs:
+  scrape:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Checkout do repositório
+        uses: actions/checkout@v4
+
+      - name: Instalar Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Instalar dependências Python
+        run: pip install playwright gspread google-auth
+
+      - name: Instalar navegador Chromium
+        run: playwright install chromium --with-deps
+
+      - name: Rodar o scraper
+        env:
+          LINKEDIN_EMAIL:     ${{ secrets.LINKEDIN_EMAIL }}
+          LINKEDIN_PASSWORD:  ${{ secrets.LINKEDIN_PASSWORD }}
+          GOOGLE_CREDENTIALS: ${{ secrets.GOOGLE_CREDENTIALS }}
+          GOOGLE_SHEET_ID:    ${{ secrets.GOOGLE_SHEET_ID }}
+        run: python scraper.py
