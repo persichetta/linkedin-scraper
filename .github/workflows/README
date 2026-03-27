@@ -1,0 +1,144 @@
+# 🔍 LinkedIn Job Scraper → Google Sheets
+
+Automatically scrapes job listings from specific companies on LinkedIn, saves them to Google Sheets, and detects when listings are taken down.
+
+---
+
+## 📁 Project structure
+
+```
+linkedin-scraper/
+├── scraper.py                        # Main script
+├── .github/
+│   └── workflows/
+│       └── scraper.yml               # GitHub Actions automation
+└── README.md
+```
+
+---
+
+## 🚀 Setup guide
+
+### 1. Create the GitHub repository
+
+1. Go to github.com → **New repository**
+2. Name it `linkedin-scraper` (can be private)
+3. Clone it locally and add `scraper.py` and `.github/workflows/scraper.yml`
+
+---
+
+### 2. Set up Google Sheets
+
+#### 2a. Create the spreadsheet
+1. Go to sheets.google.com → create a new blank spreadsheet
+2. Copy the **spreadsheet ID** from the URL — it's the part between `/d/` and `/edit`:
+   ```
+   https://docs.google.com/spreadsheets/d/THIS_PART_HERE/edit
+   ```
+
+#### 2b. Create a Service Account
+1. Go to console.cloud.google.com
+2. Create a new project (or use an existing one)
+3. Go to **APIs & Services → Library** and enable the **Google Sheets API**
+4. Go to **APIs & Services → Credentials → Create Credentials → Service Account**
+5. Give it a name and click **Done**
+6. Click the service account → **Keys tab → Add Key → JSON**
+7. Download the `.json` file — you'll use its contents as a GitHub secret
+
+#### 2c. Share the spreadsheet with the service account
+1. Open the downloaded JSON and copy the `"client_email"` field (looks like `name@project.iam.gserviceaccount.com`)
+2. In Google Sheets, click **Share** and add that email with **Editor** permission
+
+---
+
+### 3. Add secrets to GitHub
+
+Go to your repository → **Settings → Secrets and variables → Actions → New repository secret**
+
+Create the following secrets:
+
+| Secret name          | Value                                                        |
+|----------------------|--------------------------------------------------------------|
+| `LINKEDIN_EMAIL`     | Your LinkedIn email                                          |
+| `LINKEDIN_PASSWORD`  | Your LinkedIn password                                       |
+| `GOOGLE_CREDENTIALS` | The full contents of the service account `.json` file        |
+| `GOOGLE_SHEET_ID`    | The spreadsheet ID you copied from the URL                   |
+
+> ⚠️ **Important:** Paste the entire JSON into `GOOGLE_CREDENTIALS`, including the outer `{ }` braces.
+
+---
+
+### 4. Configure target companies in scraper.py
+
+At the top of `scraper.py`, edit the `EMPRESAS` list:
+
+```python
+EMPRESAS = [
+    {"nome": "Imaflora",   "linkedin_id": "164025"},
+    {"nome": "WWF Brasil", "linkedin_id": "3326874"},
+]
+```
+
+#### How to find a company's LinkedIn ID:
+1. Go to the company's LinkedIn profile
+2. View the page source (Ctrl+U) and search for `"companyId"` or `"f_C="`
+3. Alternatively, test URLs like `linkedin.com/jobs/search/?f_C=NUMBER` until you find the right one
+
+---
+
+### 5. Run manually to test
+
+In GitHub, go to **Actions → LinkedIn Job Scraper → Run workflow**
+
+Watch the live log. On the first run, the "Vagas" and "Log" tabs will be created automatically in your spreadsheet.
+
+---
+
+### 6. Automatic scheduling
+
+The workflow runs automatically **Monday through Friday at 6am BRT** (9am UTC).
+
+To change the time, edit the `cron` line in `.github/workflows/scraper.yml`:
+```yaml
+- cron: "0 9 * * 1-5"   # minute hour day month weekday
+```
+
+---
+
+## 📊 Spreadsheet structure
+
+### "Vagas" tab (job listings)
+
+| job_id | empresa | titulo | local | link | status | data_coleta | data_encerramento |
+|--------|---------|--------|-------|------|--------|-------------|-------------------|
+| 123456 | Imaflora | Marketing Analyst | São Paulo | https://... | Ativa | 2025-03-27 | |
+| 789012 | WWF | Coordinator | Brasília | https://... | Encerrada | 2025-03-20 | 2025-03-27 |
+
+### "Log" tab
+
+Records each run with the date, number of new listings, closed listings, and status.
+
+---
+
+## ⚠️ Important notes
+
+- **Never share** your secrets (LinkedIn and Google credentials)
+- LinkedIn may trigger a verification challenge on the **first run**. If that happens, log in manually from your browser once to clear the checkpoint
+- The script only collects listings from the **first page** of results (~25 jobs). To collect more, pagination/scrolling would need to be added
+- Consider using a **secondary LinkedIn account** rather than your main one to reduce the risk of being flagged
+
+---
+
+## 🔧 Customization
+
+**Filter by keyword** (e.g. only "data" roles):
+```python
+PALAVRAS_CHAVE = "data"
+```
+
+**Run twice a day:**
+```yaml
+- cron: "0 9,15 * * 1-5"
+```
+
+**Add email notifications** when new jobs appear: integrate with [SendGrid](https://sendgrid.com) or use the `dawidd6/action-send-mail` GitHub Action.
