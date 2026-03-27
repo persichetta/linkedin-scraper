@@ -12,10 +12,11 @@ from google.oauth2.service_account import Credentials
 # Para achar o ID: vá ao perfil da empresa no LinkedIn e olhe a URL
 # Ex: linkedin.com/company/imaflora → pegue o slug e rode get_company_id()
 EMPRESAS = [
-    {"nome": "Imaflora",      "linkedin_id": "164025"},
-    {"nome": "WWF Brasil",    "linkedin_id": "3326874"},
-    {"nome": "ICLEI",         "linkedin_id": "3232"},
-    # Adicione mais empresas aqui
+    {"nome": "Greenpeace Brasil",        "linkedin_id": "24917698"},
+    {"nome": "Greenpeace Internacional", "linkedin_id": "5273449"},
+    {"nome": "WRI Brasil",               "linkedin_id": "54340470"},
+    {"nome": "Imaflora",                 "linkedin_id": "51715656"},
+    {"nome": "ActionAid",                "linkedin_id": "5654"},
 ]
 
 PALAVRAS_CHAVE = ""          # Filtra por cargo (ex: "marketing", "dados"). Deixe "" para todas.
