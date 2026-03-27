@@ -2,8 +2,8 @@ name: LinkedIn Job Scraper
 
 on:
   schedule:
-    - cron: "0 9 * * 1-5"   # Roda de segunda a sexta às 9h (horário UTC = 6h BRT)
-  workflow_dispatch:          # Permite rodar manualmente pelo painel do GitHub
+    - cron: "0 9 * * 1-5"
+  workflow_dispatch:
 
 jobs:
   scrape:
@@ -22,7 +22,7 @@ jobs:
       - name: Instalar dependências Python
         run: pip install playwright gspread google-auth
 
-      - name: Instalar navegador e dependências OS
+      - name: Instalar navegador Chromium
         run: |
           python -m playwright install chromium
           python -m playwright install-deps chromium
