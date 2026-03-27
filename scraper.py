@@ -28,17 +28,20 @@ async def coletar_vagas(page, empresa):
     url = f"https://www.linkedin.com/jobs/search/?f_C={empresa['linkedin_id']}&keywords={PALAVRAS_CHAVE}&sortBy=DD"
     print(f"🔍 Navegando para: {empresa['nome']}")
     await page.goto(url)
+    print(f"   URL atual: {page.url}")
+    print(f"   Título: {await page.title()}")
     try:
         await page.wait_for_selector(".job-card-container", timeout=12000)
     except:
-        if "checkpoint" in page.url or "login" in page.url:
-            print(f"❌ Cookies expirados ou bloqueio em {empresa['nome']}")
+        if "checkpoint" in page.url or "login" in page.url or "authwall" in page.url:
+            print(f"   ❌ Redirecionado para login/checkpoint — cookies inválidos ou expirados")
             return []
-        print(f"ℹ️ Nenhuma vaga visível para {empresa['nome']}.")
+        print(f"   ℹ️ Nenhuma vaga visível para {empresa['nome']}.")
         return []
 
     vagas = []
     cards = await page.query_selector_all(".job-card-container")
+    print(f"   Cards encontrados: {len(cards)}")
     for card in cards:
         try:
             titulo_el = await card.query_selector(".job-card-list__title")
@@ -58,7 +61,7 @@ async def coletar_vagas(page, empresa):
                 })
         except:
             continue
-    print(f"  → {len(vagas)} vagas encontradas.")
+    print(f"   → {len(vagas)} vagas encontradas.")
     return vagas
 
 
@@ -85,3 +88,51 @@ def salvar_no_sheets(vagas_novas):
             aba.append_row([v["job_id"], v["empresa"], v["titulo"], v["local"], v["link"], "Ativa", v["coletado"], ""])
             adicionadas += 1
     print(f"✅ {adicionadas} vagas novas adicionadas.")
+
+
+async def main():
+    try:
+        cookies_raw = os.environ.get("LINKEDIN_COOKIES")
+        if not cookies_raw:
+            raise ValueError("Secret LINKEDIN_COOKIES não encontrada!")
+        cookies_list = normalizar_cookies(json.loads(cookies_raw))
+        print(f"✅ {len(cookies_list)} cookies carregados.")
+    except Exception as e:
+        print(f"❌ Erro ao carregar cookies: {e}")
+        return
+
+    async with async_playwright() as p:
+        browser = await p.chromium.launch(
+            headless=True,
+            args=["--no-sandbox", "--disable-setuid-sandbox"]
+        )
+        context = await browser.new_context(
+            user_agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36"
+        )
+        await context.add_cookies(cookies_list)
+        page = await context.new_page()
+
+        # Verifica se os cookies funcionaram
+        print("🔐 Verificando autenticação...")
+        await page.goto("https://www.linkedin.com/feed/")
+        await page.wait_for_load_state("networkidle")
+        print(f"   URL após feed: {page.url}")
+        if "login" in page.url or "authwall" in page.url:
+            print("❌ Cookies inválidos — não foi possível autenticar no LinkedIn.")
+            await browser.close()
+            return
+        print("✅ Autenticado com sucesso!")
+
+        todas_vagas = []
+        for empresa in EMPRESAS:
+            vagas = await coletar_vagas(page, empresa)
+            todas_vagas.extend(vagas)
+            await asyncio.sleep(7)
+
+        await browser.close()
+        salvar_no_sheets(todas_vagas)
+        print("🎉 Processo finalizado.")
+
+
+if __name__ == "__main__":
+    asyncio.run(main())
