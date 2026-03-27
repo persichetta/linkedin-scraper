@@ -68,6 +68,20 @@ def salvar_no_sheets(vagas_novas):
         return
     print("📊 Enviando dados para o Google Sheets...")
     creds_info = json.loads(os.environ["GOOGLE_CREDENTIALS"])
-creds = Credentials.from_service_account_info(
+    creds = Credentials.from_service_account_info(
         creds_info, scopes=["https://www.googleapis.com/auth/spreadsheets"]
     )
+    gc = gspread.authorize(creds)
+    sh = gc.open_by_key(GOOGLE_SHEET_ID)
+    try:
+        aba = sh.worksheet("Vagas")
+    except:
+        aba = sh.add_worksheet("Vagas", rows=1000, cols=8)
+        aba.append_row(["job_id", "empresa", "titulo", "local", "link", "status", "data_coleta", "data_encerramento"])
+    existentes = {str(r["job_id"]) for r in aba.get_all_records()}
+    adicionadas = 0
+    for v in vagas_novas:
+        if v["job_id"] not in existentes:
+            aba.append_row([v["job_id"], v["empresa"], v["titulo"], v["local"], v["link"], "Ativa", v["coletado"], ""])
+            adicionadas += 1
+    print(f"✅ {adicionadas} vagas novas adicionadas.")
