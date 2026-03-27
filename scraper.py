@@ -33,10 +33,12 @@ def normalizar_cookies(cookies_list):
 
     resultado = []
     for cookie in cookies_list:
-        if "sameSite" in cookie:
+      if "sameSite" in cookie and cookie["sameSite"] is not None:
             val = cookie["sameSite"].lower()
             cookie["sameSite"] = mapping_same_site.get(val, "None")
-
+        else:
+            cookie["sameSite"] = "None"
+            
         cookie_limpo = {k: v for k, v in cookie.items() if k in campos_permitidos}
         resultado.append(cookie_limpo)
 
