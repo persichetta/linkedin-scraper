@@ -13,6 +13,13 @@ EMPRESAS = [
     {"nome": "WRI Brasil",               "linkedin_id": "54340470"},
     {"nome": "Imaflora",                 "linkedin_id": "51715656"},
     {"nome": "ActionAid",                "linkedin_id": "5654"},
+    {"nome": "WWF Brasil",                "linkedin_id": "25057196"},
+    {"nome": "IPE Instituto de Pesquisas Ecologicas",                "linkedin_id": "28304"},
+    {"nome": "Institute for Climate and Society",                "linkedin_id": "14609016"},
+    {"nome": "Instituto Socioambiental",                "linkedin_id": "1208136"},
+    {"nome": "Climate Ventures",                "linkedin_id": "1220751"},
+    {"nome": "WITNESS",                "linkedin_id": "77252609"},
+    {"nome": "Anistia Internacional",                "linkedin_id": "26481"},
 ]
 
 PALAVRAS_CHAVE = ""
