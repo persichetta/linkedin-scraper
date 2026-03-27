@@ -32,10 +32,17 @@ async def login(page):
     await page.fill("#password", os.environ["LINKEDIN_PASSWORD"])
     await page.click('[type="submit"]')
     await page.wait_for_load_state("networkidle")
+    await asyncio.sleep(3)
 
-    # Verifica se caiu em verificação extra (CAPTCHA, e-mail, etc.)
-    if "checkpoint" in page.url or "challenge" in page.url:
-        raise Exception("⚠️ LinkedIn pediu verificação extra. Faça login manual uma vez para limpar o checkpoint.")
+    current_url = page.url
+    print(f"URL após login: {current_url}")
+
+    if "login" in current_url or "authwall" in current_url:
+        raise Exception("⚠️ Login falhou — verifique as credenciais nos secrets do GitHub.")
+
+    if "checkpoint" in current_url or "challenge" in current_url:
+        raise Exception("⚠️ LinkedIn pediu verificação extra. Acesse pelo navegador, complete a verificação e tente novamente.")
+
     print("✅ Login OK")
 
 
