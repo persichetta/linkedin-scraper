@@ -31,4 +31,5 @@ jobs:
           LINKEDIN_PASSWORD:  ${{ secrets.LINKEDIN_PASSWORD }}
           GOOGLE_CREDENTIALS: ${{ secrets.GOOGLE_CREDENTIALS }}
           GOOGLE_SHEET_ID:    ${{ secrets.GOOGLE_SHEET_ID }}
+          LINKEDIN_COOKIES:   ${{ secrets.LINKEDIN_COOKIES }}
         run: python scraper.py
