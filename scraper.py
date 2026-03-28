@@ -8,11 +8,18 @@ import gspread
 from google.oauth2.service_account import Credentials
 
 EMPRESAS = [
-    {"nome": "Greenpeace Brasil",        "linkedin_id": "24917698"},
-    {"nome": "Greenpeace Internacional", "linkedin_id": "5273449"},
-    {"nome": "WRI Brasil",               "linkedin_id": "54340470"},
-    {"nome": "Imaflora",                 "linkedin_id": "51715656"},
-    {"nome": "ActionAid",                "linkedin_id": "5654"},
+    {"nome": "Greenpeace Brasil",                      "linkedin_id": "24917698"},
+    {"nome": "Greenpeace Internacional",               "linkedin_id": "5273449"},
+    {"nome": "WRI Brasil",                             "linkedin_id": "54340470"},
+    {"nome": "Imaflora",                               "linkedin_id": "51715656"},
+    {"nome": "ActionAid",                              "linkedin_id": "5654"},
+    {"nome": "WWF Brasil",                             "linkedin_id": "25057196"},
+    {"nome": "IPE Instituto de Pesquisas Ecologicas",  "linkedin_id": "28304"},
+    {"nome": "Institute for Climate and Society",      "linkedin_id": "14609016"},
+    {"nome": "Instituto Socioambiental",               "linkedin_id": "1208136"},
+    {"nome": "Climate Ventures",                       "linkedin_id": "1220751"},
+    {"nome": "WITNESS",                                "linkedin_id": "77252609"},
+    {"nome": "Anistia Internacional",                  "linkedin_id": "26481"},
 ]
 
 PALAVRAS_CHAVE = ""
@@ -20,45 +27,31 @@ GOOGLE_SHEET_ID = os.environ.get("GOOGLE_SHEET_ID")
 
 
 def normalizar_cookies(cookies_list):
-    mapping_same_site = {
-        "no_restriction": "None",
-        "unspecified":    "None",
-        "none":           "None",
-        "lax":            "Lax",
-        "strict":         "Strict",
-    }
-    campos_permitidos = {"name", "value", "domain", "path", "expires", "httpOnly", "secure", "sameSite"}
-
-    resultado = []
-    for cookie in cookies_list:
-        if "sameSite" in cookie and cookie["sameSite"] is not None:
-            val = cookie["sameSite"].lower()
-            cookie["sameSite"] = mapping_same_site.get(val, "None")
-        else:
-            cookie["sameSite"] = "None"
-        cookie_limpo = {k: v for k, v in cookie.items() if k in campos_permitidos}
-        resultado.append(cookie_limpo)
-    return resultado
+    campos_permitidos = {"name", "value", "domain", "path", "expires", "httpOnly", "secure"}
+    return [{k: v for k, v in c.items() if k in campos_permitidos} for c in cookies_list]
 
 
 async def coletar_vagas(page, empresa):
     url = f"https://www.linkedin.com/jobs/search/?f_C={empresa['linkedin_id']}&keywords={PALAVRAS_CHAVE}&sortBy=DD"
     print(f"🔍 Navegando para: {empresa['nome']}")
     await page.goto(url)
+    await asyncio.sleep(3)
+    print(f"   URL atual: {page.url}")
+    print(f"   Título: {await page.title()}")
     html = await page.content()
-print(f"   HTML (primeiros 500 chars): {html[:500]}")
+    print(f"   HTML (500 chars): {html[:500]}")
     try:
         await page.wait_for_selector(".job-card-container", timeout=12000)
     except:
-        if "checkpoint" in page.url or "login" in page.url:
-            print(f"❌ Cookies expirados ou bloqueio em {empresa['nome']}")
+        if "checkpoint" in page.url or "login" in page.url or "authwall" in page.url:
+            print(f"   ❌ Redirecionado para login/checkpoint")
             return []
-        print(f"ℹ️ Nenhuma vaga visível para {empresa['nome']}.")
+        print(f"   ℹ️ Nenhuma vaga visível para {empresa['nome']}.")
         return []
-        
 
     vagas = []
     cards = await page.query_selector_all(".job-card-container")
+    print(f"   Cards encontrados: {len(cards)}")
     for card in cards:
         try:
             titulo_el = await card.query_selector(".job-card-list__title")
@@ -78,7 +71,7 @@ print(f"   HTML (primeiros 500 chars): {html[:500]}")
                 })
         except:
             continue
-    print(f"  → {len(vagas)} vagas encontradas.")
+    print(f"   → {len(vagas)} vagas encontradas.")
     return vagas
 
 
@@ -98,7 +91,7 @@ def salvar_no_sheets(vagas_novas):
     except:
         aba = sh.add_worksheet("Vagas", rows=1000, cols=8)
         aba.append_row(["job_id", "empresa", "titulo", "local", "link", "status", "data_coleta", "data_encerramento"])
-    existentes = {r["job_id"] for r in aba.get_all_records()}
+    existentes = {str(r["job_id"]) for r in aba.get_all_records()}
     adicionadas = 0
     for v in vagas_novas:
         if v["job_id"] not in existentes:
@@ -112,8 +105,7 @@ async def main():
         cookies_raw = os.environ.get("LINKEDIN_COOKIES")
         if not cookies_raw:
             raise ValueError("Secret LINKEDIN_COOKIES não encontrada!")
-        cookies_list = json.loads(cookies_raw)
-        cookies_list = normalizar_cookies(cookies_list)
+        cookies_list = normalizar_cookies(json.loads(cookies_raw))
         print(f"✅ {len(cookies_list)} cookies carregados.")
     except Exception as e:
         print(f"❌ Erro ao carregar cookies: {e}")
@@ -129,11 +121,23 @@ async def main():
         )
         await context.add_cookies(cookies_list)
         page = await context.new_page()
+
+        print("🔐 Verificando autenticação...")
+        await page.goto("https://www.linkedin.com/feed/")
+        await page.wait_for_load_state("domcontentloaded")
+        print(f"   URL após feed: {page.url}")
+        if "login" in page.url or "authwall" in page.url:
+            print("❌ Cookies inválidos.")
+            await browser.close()
+            return
+        print("✅ Autenticado com sucesso!")
+
         todas_vagas = []
         for empresa in EMPRESAS:
             vagas = await coletar_vagas(page, empresa)
             todas_vagas.extend(vagas)
             await asyncio.sleep(7)
+
         await browser.close()
         salvar_no_sheets(todas_vagas)
         print("🎉 Processo finalizado.")
