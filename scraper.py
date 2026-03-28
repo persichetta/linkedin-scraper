@@ -45,6 +45,8 @@ async def coletar_vagas(page, empresa):
     url = f"https://www.linkedin.com/jobs/search/?f_C={empresa['linkedin_id']}&keywords={PALAVRAS_CHAVE}&sortBy=DD"
     print(f"🔍 Navegando para: {empresa['nome']}")
     await page.goto(url)
+    html = await page.content()
+print(f"   HTML (primeiros 500 chars): {html[:500]}")
     try:
         await page.wait_for_selector(".job-card-container", timeout=12000)
     except:
@@ -53,6 +55,7 @@ async def coletar_vagas(page, empresa):
             return []
         print(f"ℹ️ Nenhuma vaga visível para {empresa['nome']}.")
         return []
+        
 
     vagas = []
     cards = await page.query_selector_all(".job-card-container")
