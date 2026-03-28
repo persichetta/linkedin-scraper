@@ -29,12 +29,12 @@ GOOGLE_SHEET_ID = os.environ.get("GOOGLE_SHEET_ID")
 async def login(page):
     print("🔐 Fazendo login no LinkedIn...")
     await page.goto("https://www.linkedin.com/login")
-    await page.wait_for_load_state("networkidle")
+    await page.wait_for_load_state("domcontentloaded")
     await page.fill("#username", os.environ["LINKEDIN_EMAIL"])
     await page.fill("#password", os.environ["LINKEDIN_PASSWORD"])
     await page.click('[type="submit"]')
-    await page.wait_for_load_state("networkidle")
-    await asyncio.sleep(3)
+    await page.wait_for_load_state("domcontentloaded")
+    await asyncio.sleep(5)
     current_url = page.url
     print(f"   URL após login: {current_url}")
     if "feed" in current_url or "mynetwork" in current_url or "jobs" in current_url:
@@ -43,11 +43,8 @@ async def login(page):
     if "checkpoint" in current_url or "challenge" in current_url:
         print("❌ LinkedIn pediu verificação extra.")
         return False
-    if "login" in current_url:
-        print("❌ Login falhou — verifique email/senha.")
-        return False
-    print("✅ Login OK")
-    return True
+    print("❌ Login falhou — URL inesperada.")
+    return False
 
 
 async def coletar_vagas(page, empresa):
