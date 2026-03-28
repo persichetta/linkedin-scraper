@@ -22,7 +22,6 @@ EMPRESAS = [
     {"nome": "Anistia Internacional",                  "linkedin_id": "26481"},
 ]
 
-PALAVRAS_CHAVE = ""
 GOOGLE_SHEET_ID = os.environ.get("GOOGLE_SHEET_ID")
 
 
@@ -32,16 +31,20 @@ def normalizar_cookies(cookies_list):
 
 
 async def coletar_vagas(page, empresa):
-    url = f"https://www.linkedin.com/jobs/search/?f_C={empresa['linkedin_id']}&keywords={PALAVRAS_CHAVE}&sortBy=DD"
+    # Usa URL da página de vagas da empresa (diferente da busca)
+    url = f"https://www.linkedin.com/company/{empresa['linkedin_id']}/jobs/"
     print(f"🔍 Navegando para: {empresa['nome']}")
-    await page.goto(url)
+    try:
+        await page.goto(url, wait_until="domcontentloaded", timeout=20000)
+    except Exception as e:
+        print(f"   ❌ Erro ao navegar: {e}")
+        return []
     await asyncio.sleep(3)
     print(f"   URL atual: {page.url}")
     print(f"   Título: {await page.title()}")
-    html = await page.content()
-    print(f"   HTML (500 chars): {html[:500]}")
+
     try:
-        await page.wait_for_selector(".job-card-container", timeout=12000)
+        await page.wait_for_selector(".job-card-container", timeout=10000)
     except:
         if "checkpoint" in page.url or "login" in page.url or "authwall" in page.url:
             print(f"   ❌ Redirecionado para login/checkpoint")
@@ -123,8 +126,7 @@ async def main():
         page = await context.new_page()
 
         print("🔐 Verificando autenticação...")
-        await page.goto("https://www.linkedin.com/feed/")
-        await page.wait_for_load_state("domcontentloaded")
+        await page.goto("https://www.linkedin.com/feed/", wait_until="domcontentloaded")
         print(f"   URL após feed: {page.url}")
         if "login" in page.url or "authwall" in page.url:
             print("❌ Cookies inválidos.")
